@@ -1,0 +1,120 @@
+### Version 1 --- Adam ft GPT ### 
+
+import sys
+import csv
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+from tkinter import *
+
+
+def read_data():
+    """
+    Reads the latest data from the file.
+    """
+    with open(filename, 'r') as file:
+        reader = csv.DictReader(file)
+        data = []
+        for row in reader:
+            data.append(row)
+    return data
+
+
+def plot_graph(field):
+    """
+    Plots the selected graph.
+    """
+    global selected_graph, data, canvas, plot
+
+    # Update the selected graph
+    selected_graph = field
+
+    # Clear the plot
+    plot.clear()
+
+    # Set the title of the plot to the selected field name
+    plot.set_title(selected_graph)
+
+    # Get the x and y data for the selected graph
+    x_data = [float(row['epoch']) for row in data]
+    y_data = [float(row[selected_graph]) for row in data]
+
+    # Plot the data
+    plot.plot(x_data, y_data, 'ro')
+
+    # Redraw the canvas
+    canvas.draw()
+
+
+def monitor_file():
+    """
+    Monitors the CSV file for changes and updates the plot accordingly.
+    """
+    global selected_graph, data, canvas, plot, file_pos
+
+    # Read the latest data from the file
+    new_data = read_data()
+
+    # Check if the file has been updated
+    if new_data != data:
+
+        # Update the data
+        data = new_data
+
+        # Get the selected data field
+        field = selected_graph
+
+        # Get the latest data point
+        latest_x = float(data[-1]['epoch'])
+        latest_y = float(data[-1][field])
+
+        # Update the plot
+        plot.plot(latest_x, latest_y, 'ro')
+        canvas.draw()
+
+    # Wait for a short period before checking for updates again
+    root.after(100, monitor_file)
+
+
+# Get the filename from the command line arguments
+filename = sys.argv[1]
+
+# Read the data from the file
+data = read_data()
+
+# Get the field names from the header row
+fields = list(data[0].keys())
+
+# Initialize selected_graph to the first field
+selected_graph = fields[0]
+
+# Initialize the plot
+fig, plot = plt.subplots()
+plot.set_title(selected_graph)
+
+# Get the x and y data for the selected graph
+x_data = [float(row['epoch']) for row in data]
+y_data = [float(row[selected_graph]) for row in data]
+
+# Plot the data
+plot.plot(x_data, y_data, 'ro')
+
+# Create the Tkinter GUI
+root = Tk()
+root.title("Real-time Plotting")
+
+# Create the plot canvas
+canvas = FigureCanvasTkAgg(fig, master=root)
+canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
+
+# Add buttons to select the graph to plot
+for field in fields:
+    btn = Button(root, text=field, command=lambda field=field: plot_graph(field))
+    btn.pack(side=LEFT, padx=5, pady=5)
+
+# Start monitoring the file for changes
+file_pos = 0
+root.after(100, monitor_file)
+
+# Start the Tkinter event loop
+root.mainloop()
